@@ -1,0 +1,11 @@
+package templates
+
+templ Loader(route string) {
+    <span
+      class="loading loading-dots loading-lg"
+      hx-get={route}
+      hx-trigger="load"
+      hx-swap="outerHTML"
+      >
+    </span>
+}

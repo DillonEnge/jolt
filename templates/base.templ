@@ -1,0 +1,137 @@
+package templates
+
+import (
+  "fmt"
+
+  "github.com/casdoor/casdoor-go-sdk/casdoorsdk"
+	"github.com/DillonEnge/jolt/internal/api"
+
+)
+
+func getSigninURL(config *api.Config) templ.SafeURL {
+  urlString := fmt.Sprintf(
+    "%s/login/oauth/authorize?client_id=%s&response_type=code&redirect_uri=%s&scope=read&state=%s",
+    config.Casdoor.Endpoint,
+    config.Casdoor.ClientID,
+    config.Casdoor.RedirectURI,
+    config.Casdoor.ApplicationName,
+  )
+  return templ.SafeURL(urlString)
+}
+
+templ drawer(claims *casdoorsdk.Claims, config *api.Config) {
+  <div class="drawer drawer-end h-dvh">
+    <input id="my-drawer-3" type="checkbox" class="drawer-toggle" />
+    <div class="drawer-content flex flex-col h-full">
+      @navbar()
+      @content()
+    </div>
+    <div class="drawer-side !h-full">
+      <label for="my-drawer-3" aria-label="close sidebar" class="drawer-overlay"></label>
+      <div class="w-60 bg-base-200 min-h-full flex flex-col justify-between py-4">
+      <ul class="menu bg-base-200 min-h-full w-full p-4 flex flex-col space-y-4">
+        <li>
+          <label for="my-drawer-3">
+            <a class="text-lg" hx-get="/loader?route=/popular-listings" hx-target="#inner-content">
+              Popular Listings
+            </a>
+          </label>
+        </li>
+        <div class="divider"/>
+        <li>
+          <label for="my-drawer-3">
+            <a class="text-lg" hx-get="/loader?route=/search" hx-target="#inner-content">
+              Search Listings
+            </a>
+          </label>
+        </li>
+        if claims != nil {
+        <div class="divider"/>
+        <li>
+          <label for="my-drawer-3">
+            <a class="text-lg" hx-get="/loader?route=/create-listing" hx-target="#inner-content">
+              Create Listing
+            </a>
+          </label>
+        </li>
+        <div class="divider"/>
+        <li>
+          <label for="my-drawer-3">
+            <a class="text-lg" hx-get="/loader?route=/my-listings" hx-target="#inner-content">
+              My Listings
+            </a>
+          </label>
+        </li>
+        }
+      </ul>
+      if claims != nil {
+        <a
+          class="btn m-4 bg-base-100">
+          Log Out
+        </a>
+      } else {
+        <a
+          href={getSigninURL(config)}
+          class="btn m-4 bg-base-100">
+          Log In
+        </a>
+      }
+      </div>
+    </div>
+  </div>
+}
+
+templ content() {
+  <div
+    class="h-full flex flex-col items-center justify-evenly">
+    <span
+      class="loading loading-dots loading-lg"
+      hx-get="/popular-listings"
+      hx-trigger="load"
+      hx-swap="outerHTML"
+      ></span>
+  </div>
+}
+
+templ navbar() {
+  <div class="navbar bg-base-100">
+    <div class="navbar-start">
+    </div>
+    <div class="navbar-center">
+      <a class="btn btn-ghost text-xl italic">Jolt</a>
+    </div>
+    <div class="navbar-end">
+      <label class="btn btn-square btn-ghost" for="my-drawer-3" aria-label="open sidebar">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          fill="none"
+          viewBox="0 0 24 24"
+          class="inline-block h-5 w-5 stroke-current">
+          <path
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            stroke-width="2"
+            d="M4 6h16M4 12h16M4 18h16"></path>
+        </svg>
+      </label>
+    </div>
+  </div>
+}
+
+templ Base(claims *casdoorsdk.Claims, config *api.Config) {
+  <!doctype html>
+  <html>
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <link href="./static/output.css" rel="stylesheet">
+      <script src="https://unpkg.com/htmx.org@2.0.2"></script>
+      <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+      <style>
+      </style>
+    </head>
+    <body>
+      @drawer(claims, config)
+    </body>
+  </html>
+}

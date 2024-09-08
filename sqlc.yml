@@ -1,0 +1,16 @@
+version: "2"
+sql:
+  - engine: "postgresql"
+    queries: "./database/queries"
+    schema: "./database/migrations"
+    gen:
+      go:
+        package: database
+        out: database
+        emit_json_tags: true
+        emit_prepared_queries: true
+        emit_interface: true
+        sql_package: "pgx/v5"
+        json_tags_case_style: snake
+        rename:
+        overrides:
