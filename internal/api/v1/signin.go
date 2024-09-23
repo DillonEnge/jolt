@@ -5,11 +5,11 @@ import (
 	"net/http"
 
 	"github.com/DillonEnge/jolt/internal/api"
+	"github.com/DillonEnge/jolt/internal/auth"
 	"github.com/alexedwards/scs/v2"
-	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 )
 
-func HandleSignin(sm *scs.SessionManager, authClient *casdoorsdk.Client) api.HandlerFuncWithError {
+func HandleSignin(sm *scs.SessionManager, authClient *auth.Client) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		code := r.URL.Query().Get("code")
 		state := r.URL.Query().Get("state")

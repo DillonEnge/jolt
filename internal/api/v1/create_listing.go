@@ -4,12 +4,12 @@ import (
 	"net/http"
 
 	"github.com/DillonEnge/jolt/internal/api"
+	"github.com/DillonEnge/jolt/internal/auth"
 	"github.com/DillonEnge/jolt/templates"
 	"github.com/alexedwards/scs/v2"
-	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 )
 
-func HandleCreateListing(sm *scs.SessionManager, authClient *casdoorsdk.Client) api.HandlerFuncWithError {
+func HandleCreateListing(sm *scs.SessionManager, authClient *auth.Client) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		token := sm.GetString(r.Context(), "authToken")
 

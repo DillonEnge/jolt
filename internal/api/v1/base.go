@@ -5,12 +5,13 @@ import (
 	"net/http"
 
 	"github.com/DillonEnge/jolt/internal/api"
+	"github.com/DillonEnge/jolt/internal/auth"
 	"github.com/DillonEnge/jolt/templates"
 	"github.com/alexedwards/scs/v2"
 	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 )
 
-func HandleBase(sm *scs.SessionManager, authClient *casdoorsdk.Client, config *api.Config) api.HandlerFuncWithError {
+func HandleBase(sm *scs.SessionManager, authClient *auth.Client, config *api.Config) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		var claims *casdoorsdk.Claims
 		var err error

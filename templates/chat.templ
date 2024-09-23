@@ -1,0 +1,62 @@
+package templates
+
+import "fmt"
+import "github.com/casdoor/casdoor-go-sdk/casdoorsdk"
+import "github.com/DillonEnge/jolt/database"
+import "time"
+import "strings"
+
+func getMessageClass(m database.Message, claims *casdoorsdk.Claims) string {
+  if claims.Email == m.SenderEmail {
+    return fmt.Sprintf("chat chat-%s", "end")
+  }
+
+  return fmt.Sprintf("chat chat-%s", "start")
+}
+
+templ MessageOOB(m database.Message, claims *casdoorsdk.Claims) {
+  <div
+    id="messages"
+    hx-swap-oob="beforeend">
+    @Message(m, claims)
+  </div>
+}
+
+templ Message(m database.Message, claims *casdoorsdk.Claims) {
+  <div class={getMessageClass(m, claims)}>
+    <div class="chat-image avatar placeholder">
+      <div class="bg-neutral text-neutral-content w-10 rounded-full">
+        <span class="text-3xl">{strings.ToUpper(m.SenderName[:1])}</span>
+      </div>
+    </div>
+    <div class="chat-header">
+      { m.SenderName}
+      <time class="text-xs opacity-50">{ m.TimeSent.Time.Local().Format(time.Kitchen)}</time>
+    </div>
+    <div class="chat-bubble">{m.MessageText}</div>
+    <div class="chat-footer opacity-50">{ m.Status.String }</div>
+  </div>
+}
+
+templ Chat(m []database.Message, negotiationID string, claims *casdoorsdk.Claims) {
+  <div
+    id="chat-window"
+    class="w-full h-full p-4 flex flex-col justify-end"
+    hx-ext="ws"
+    ws-connect="/ws/messages">
+    <div class="hidden chat-end chat-start"/>
+    <div id="messages" class="w-full h-full flex flex-col justify-end p-4 overflow-scroll">
+      for _, v := range m {
+        @Message(v, claims)
+      }
+    </div>
+    <div id="action-bar" class="w-full">
+      <form ws-send hx-on::ws-after-send="document.getElementById('messageInput').value = ''">
+        <input id="messageInput" type="text" placeholder="Type here" name="message" class="input input-bordered w-full"/>
+      </form>
+      <form ws-send hx-trigger="load">
+        <input type="hidden" name="negotiation_id" value={negotiationID}></input>
+      </form>
+    </div>
+  </div>
+}

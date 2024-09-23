@@ -52,6 +52,7 @@ Jolt is a minimalistic marketplace web application designed for lightning-fast t
 
 Jolt requires the following environment variables to be set:
 
+- `DATABASE_PASSWORD`: The password for your database user
 - `DATABASE_URL`: The connection string for your database.
 - `PORT`: The port number on which the application will run.
 - `CASDOOR_APPLICATION_NAME`: The name of your Casdoor application.
@@ -65,31 +66,39 @@ We recommend using `direnv` to manage your environment variables. Follow these s
 
 1. Install `direnv` if you haven't already. (Visit [direnv.net](https://direnv.net) for installation instructions)
 
-2. Create a `.envrc` file in the root of your project:
+2. Add the following to ~/.config/direnv/direnv.toml
 
    ```
-   export DATABASE_URL=postgresql://username:password@localhost:5432/marketwise
-   export PORT=8080
-   export CASDOOR_APPLICATION_NAME=your_application_name
-   export CASDOOR_CLIENT_ID=your_client_id
-   export CASDOOR_CLIENT_SECRET=your_client_secret
-   export CASDOOR_ENDPOINT=https://your-casdoor-endpoint.com
-   export CASDOOR_ORGANIZATION_NAME=your_organization_name
-   export CASDOOR_REDIRECT_URI=http://localhost:8080/callback
+   [global]
+   load_dotenv = true
+   ```
+
+2. Create a `.env` file in the root of your project:
+
+   ```
+   DATABASE_PASSWORD=testpass
+   DATABASE_URL=postgresql://username:password@localhost:5432/marketwise
+   PORT=8080
+   CASDOOR_APPLICATION_NAME=your_application_name
+   CASDOOR_CLIENT_ID=your_client_id
+   CASDOOR_CLIENT_SECRET=your_client_secret
+   CASDOOR_ENDPOINT=https://your-casdoor-endpoint.com
+   CASDOOR_ORGANIZATION_NAME=your_organization_name
+   CASDOOR_REDIRECT_URI=http://localhost:8080/callback
    ```
 
    Replace the placeholder values with your actual configuration details.
 
-3. Allow direnv to load the `.envrc` file:
+3. Allow direnv to load the `.env` file:
 
    ```
    direnv allow .
    ```
 
-4. Add `.envrc` to your `.gitignore` file to avoid committing sensitive information:
+4. Add `.env` to your `.gitignore` file to avoid committing sensitive information:
 
    ```
-   echo ".envrc" >> .gitignore
+   echo ".env" >> .gitignore
    ```
 
 Now, whenever you enter the project directory, these environment variables will be automatically loaded.
@@ -98,7 +107,7 @@ Now, whenever you enter the project directory, these environment variables will 
 
 1. Start the PostgreSQL instance using Docker Compose:
    ```
-   docker compose up -d
+   docker compose start db -d
    ```
    This command will start a PostgreSQL container in detached mode.
 

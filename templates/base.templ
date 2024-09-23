@@ -22,7 +22,7 @@ func getSigninURL(config *api.Config) templ.SafeURL {
 templ drawer(claims *casdoorsdk.Claims, config *api.Config) {
   <div class="drawer drawer-end h-dvh">
     <input id="my-drawer-3" type="checkbox" class="drawer-toggle" />
-    <div class="drawer-content flex flex-col h-full">
+    <div class="drawer-content flex flex-col h-dvh overflow-hidden">
       @navbar()
       @content()
     </div>
@@ -31,16 +31,16 @@ templ drawer(claims *casdoorsdk.Claims, config *api.Config) {
       <div class="w-60 bg-base-200 min-h-full flex flex-col justify-between py-4">
       <ul class="menu bg-base-200 min-h-full w-full p-4 flex flex-col space-y-4">
         <li>
-          <label for="my-drawer-3">
-            <a class="text-lg" hx-get="/loader?route=/popular-listings" hx-target="#inner-content">
+          <label for="my-drawer-3" hx-get="/loader?route=/popular-listings" hx-target="#inner-content">
+            <a class="text-lg" >
               Popular Listings
             </a>
           </label>
         </li>
         <div class="divider"/>
         <li>
-          <label for="my-drawer-3">
-            <a class="text-lg" hx-get="/loader?route=/search" hx-target="#inner-content">
+          <label for="my-drawer-3" hx-get="/loader?route=/search" hx-target="#inner-content">
+            <a class="text-lg">
               Search Listings
             </a>
           </label>
@@ -48,17 +48,25 @@ templ drawer(claims *casdoorsdk.Claims, config *api.Config) {
         if claims != nil {
         <div class="divider"/>
         <li>
-          <label for="my-drawer-3">
-            <a class="text-lg" hx-get="/loader?route=/create-listing" hx-target="#inner-content">
+          <label for="my-drawer-3" hx-get="/loader?route=/create-listing" hx-target="#inner-content">
+            <a class="text-lg">
               Create Listing
             </a>
           </label>
         </li>
         <div class="divider"/>
         <li>
-          <label for="my-drawer-3">
-            <a class="text-lg" hx-get="/loader?route=/my-listings" hx-target="#inner-content">
+          <label for="my-drawer-3" hx-get="/loader?route=/my-listings" hx-target="#inner-content">
+            <a class="text-lg">
               My Listings
+            </a>
+          </label>
+        </li>
+        <div class="divider"/>
+        <li>
+          <label for="my-drawer-3" hx-get="/loader?route=/negotiations" hx-target="#inner-content">
+            <a class="text-lg">
+              Negotiations
             </a>
           </label>
         </li>
@@ -83,7 +91,8 @@ templ drawer(claims *casdoorsdk.Claims, config *api.Config) {
 
 templ content() {
   <div
-    class="h-full flex flex-col items-center justify-evenly">
+    id="inner-content"
+    class="h-dvh flex flex-col items-center justify-evenly overflow-hidden">
     <span
       class="loading loading-dots loading-lg"
       hx-get="/popular-listings"
@@ -127,6 +136,7 @@ templ Base(claims *casdoorsdk.Claims, config *api.Config) {
       <link href="./static/output.css" rel="stylesheet">
       <script src="https://unpkg.com/htmx.org@2.0.2"></script>
       <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
+      <script src="https://unpkg.com/htmx-ext-ws@2.0.1/ws.js"></script>
       <style>
       </style>
     </head>

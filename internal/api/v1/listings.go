@@ -1,18 +1,24 @@
 package v1
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
 
 	"github.com/DillonEnge/jolt/database"
 	"github.com/DillonEnge/jolt/internal/api"
+	"github.com/DillonEnge/jolt/internal/auth"
 	"github.com/DillonEnge/jolt/templates"
 	"github.com/alexedwards/scs/v2"
-	"github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
+
+type ListingFetcher interface {
+	ListingByID(ctx context.Context, listingID string) ([]database.Listing, error)
+	ListingsByLikeName(ctx context.Context, listingName string) ([]database.Listing, error)
+}
 
 type RecordListingParams struct {
 	SellerEmail string  `json:"seller_email"`
@@ -21,7 +27,7 @@ type RecordListingParams struct {
 	Price       float32 `json:"price,string"`
 }
 
-func HandleListings(db *pgxpool.Pool) api.HandlerFuncWithError {
+func HandleListings(db ListingFetcher) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		title := r.URL.Query().Get("title")
 
@@ -39,18 +45,7 @@ func HandleListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 			return nil
 		}
 
-		tx, err := db.Begin(r.Context())
-		if err != nil {
-			return &api.ApiError{
-				Status: http.StatusInternalServerError,
-				Err:    err,
-			}
-		}
-		defer tx.Rollback(r.Context())
-
-		queries := database.New(tx)
-
-		rows, err := queries.ListingsByLikeName(r.Context(), name)
+		listings, err := db.ListingsByLikeName(r.Context(), name)
 		if err != nil {
 			return &api.ApiError{
 				Status: http.StatusInternalServerError,
@@ -58,19 +53,19 @@ func HandleListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 			}
 		}
 
-		if len(rows) == 0 {
+		if len(listings) == 0 {
 			templates.NoResults().Render(r.Context(), w)
 			return nil
 		}
 
 		w.WriteHeader(http.StatusOK)
-		templates.Listings(title, rows).Render(r.Context(), w)
+		templates.Listings(title, listings).Render(r.Context(), w)
 
 		return nil
 	}
 }
 
-func HandleMyListings(db *pgxpool.Pool, authClient *casdoorsdk.Client, sm *scs.SessionManager) api.HandlerFuncWithError {
+func HandleMyListings(db *pgxpool.Pool, authClient *auth.Client, sm *scs.SessionManager) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		token := sm.GetString(r.Context(), "authToken")
 
@@ -89,7 +84,7 @@ func HandleMyListings(db *pgxpool.Pool, authClient *casdoorsdk.Client, sm *scs.S
 			}
 		}
 
-		tx, err := db.Begin(r.Context())
+		queries, tx, err := database.NewQueries(r.Context(), db)
 		if err != nil {
 			return &api.ApiError{
 				Status: http.StatusInternalServerError,
@@ -98,9 +93,7 @@ func HandleMyListings(db *pgxpool.Pool, authClient *casdoorsdk.Client, sm *scs.S
 		}
 		defer tx.Rollback(r.Context())
 
-		queries := database.New(tx)
-
-		rows, err := queries.ListingsBySellerEmail(r.Context(), claims.Email)
+		listings, err := queries.ListingsBySellerEmail(r.Context(), claims.Email)
 		if err != nil {
 			return &api.ApiError{
 				Status: http.StatusInternalServerError,
@@ -108,13 +101,13 @@ func HandleMyListings(db *pgxpool.Pool, authClient *casdoorsdk.Client, sm *scs.S
 			}
 		}
 
-		if len(rows) == 0 {
+		if len(listings) == 0 {
 			templates.NoResults().Render(r.Context(), w)
 			return nil
 		}
 
 		w.WriteHeader(http.StatusOK)
-		templates.Listings("My Listings", rows).Render(r.Context(), w)
+		templates.Listings("My Listings", listings).Render(r.Context(), w)
 
 		return nil
 	}
@@ -131,7 +124,7 @@ func HandlePostListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 			}
 		}
 
-		tx, err := db.Begin(r.Context())
+		queries, tx, err := database.NewQueries(r.Context(), db)
 		if err != nil {
 			return &api.ApiError{
 				Status: http.StatusInternalServerError,
@@ -139,8 +132,6 @@ func HandlePostListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 			}
 		}
 		defer tx.Rollback(r.Context())
-
-		queries := database.New(tx)
 
 		row, err := queries.RecordListing(r.Context(), database.RecordListingParams{
 			SellerEmail: params.SellerEmail,
@@ -175,7 +166,7 @@ func HandleDeleteListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 			}
 		}
 
-		tx, err := db.Begin(r.Context())
+		queries, tx, err := database.NewQueries(r.Context(), db)
 		if err != nil {
 			return &api.ApiError{
 				Status: http.StatusInternalServerError,
@@ -184,9 +175,7 @@ func HandleDeleteListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 		}
 		defer tx.Rollback(r.Context())
 
-		queries := database.New(tx)
-
-		row, err := queries.DeleteListing(r.Context(), id)
+		listing, err := queries.DeleteListing(r.Context(), id)
 		if err != nil {
 			return &api.ApiError{
 				Status: http.StatusInternalServerError,
@@ -197,7 +186,7 @@ func HandleDeleteListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 		tx.Commit(r.Context())
 
 		w.WriteHeader(http.StatusOK)
-		json.NewEncoder(w).Encode(row)
+		json.NewEncoder(w).Encode(listing)
 
 		return nil
 	}

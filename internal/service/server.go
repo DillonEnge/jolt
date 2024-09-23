@@ -10,10 +10,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DillonEnge/jolt/database"
 	"github.com/DillonEnge/jolt/internal/api"
 	"github.com/DillonEnge/jolt/internal/api/middleware"
 	v1 "github.com/DillonEnge/jolt/internal/api/v1"
 	"github.com/DillonEnge/jolt/internal/auth"
+	"github.com/DillonEnge/jolt/internal/messagequeue"
 	"github.com/DillonEnge/jolt/internal/sessions"
 	"github.com/DillonEnge/jolt/templates"
 	"github.com/a-h/templ"
@@ -25,6 +27,10 @@ func Start(address string, dbPool *pgxpool.Pool, config *api.Config) func(contex
 
 	authClient := auth.NewClient(config)
 
+	mq := messagequeue.NewStore()
+
+	db := database.New(dbPool)
+
 	mux := http.NewServeMux()
 
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
@@ -34,11 +40,20 @@ func Start(address string, dbPool *pgxpool.Pool, config *api.Config) func(contex
 
 	mux.Handle("GET /search", templ.Handler(templates.Search()))
 
-	mux.HandleFunc("GET /listings", makeH(v1.HandleListings(dbPool)))
+	mux.HandleFunc("GET /listings", makeH(v1.HandleListings(db)))
 	mux.HandleFunc("POST /listings", makeH(v1.HandlePostListings(dbPool)))
 	mux.HandleFunc("DELETE /listings", makeH(v1.HandleDeleteListings(dbPool)))
 
 	mux.HandleFunc("GET /create-listing", makeH(v1.HandleCreateListing(sm, authClient)))
+
+	mux.Handle("GET /negotiations", makeH(v1.HandleNegotiations(dbPool, authClient, sm)))
+	mux.Handle("POST /negotiations", makeH(v1.HandlePostNegotiation(db, authClient, sm)))
+
+	mux.Handle("GET /chat", makeH(v1.HandleChat(dbPool, sm, authClient, config)))
+
+	mux.Handle("GET /ws/messages", makeH(v1.HandleMessageWS(db, authClient, mq, sm)))
+	mux.Handle("GET /messages", makeH(v1.HandleMessages(dbPool)))
+	mux.Handle("POST /messages", makeH(v1.HandlePostMessage(dbPool, sm, authClient)))
 
 	mux.Handle(
 		"GET /static/",

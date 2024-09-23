@@ -12,7 +12,7 @@ func NewSessionManager() *scs.SessionManager {
 	s.Lifetime = 3 * time.Hour
 	s.IdleTimeout = 20 * time.Minute
 	s.Cookie.Name = "session_id"
-	s.Cookie.Domain = "dev.market.engehost.net"
+	s.Cookie.Domain = "jolt.engehost.net"
 	s.Cookie.HttpOnly = true
 	s.Cookie.Path = "/"
 	s.Cookie.Persist = true

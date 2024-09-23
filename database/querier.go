@@ -13,7 +13,12 @@ type Querier interface {
 	ListingByID(ctx context.Context, listingID string) ([]Listing, error)
 	ListingsByLikeName(ctx context.Context, listingName string) ([]Listing, error)
 	ListingsBySellerEmail(ctx context.Context, sellerEmail string) ([]Listing, error)
+	MessagesByNegotiationID(ctx context.Context, negotiationID string) ([]Message, error)
+	NegotiationByListingIDAndBuyerEmail(ctx context.Context, arg NegotiationByListingIDAndBuyerEmailParams) (Negotiation, error)
+	NegotiationsByEmail(ctx context.Context, email string) ([]NegotiationsByEmailRow, error)
 	RecordListing(ctx context.Context, arg RecordListingParams) (Listing, error)
+	RecordMessage(ctx context.Context, arg RecordMessageParams) (Message, error)
+	RecordNegotiation(ctx context.Context, arg RecordNegotiationParams) (Negotiation, error)
 }
 
 var _ Querier = (*Queries)(nil)

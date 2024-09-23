@@ -10,7 +10,7 @@ import (
 	"os/signal"
 
 	"github.com/DillonEnge/jolt/internal/api"
-	"github.com/DillonEnge/jolt/internal/server"
+	server "github.com/DillonEnge/jolt/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 

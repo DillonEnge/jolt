@@ -8,6 +8,7 @@ require (
 	github.com/casdoor/casdoor-go-sdk v0.50.0
 	github.com/gofrs/uuid/v5 v5.3.0
 	github.com/jackc/pgx/v5 v5.6.0
+	github.com/coder/websocket v1.8.12
 )
 
 require (

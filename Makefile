@@ -1,8 +1,14 @@
+init_db:
+	psql postgresql://devuser:$(DATABASE_PASSWORD)@localhost:5433/devuser?sslmode=disable -f ./database/db_scripts/init_db.sql
+
+exec_db:
+	docker exec -it jolt-db-1 psql -U postgres
+
 migrate:
-	go run github.com/jackc/tern/v2@latest migrate -m database/migrations --database market-wise-api-dev ;
+	go run github.com/jackc/tern/v2@latest migrate -m database/migrations --database jolt_dev ;
 
 migrate_down:
-	go run github.com/jackc/tern/v2@latest migrate -m database/migrations --database market-wise-api-dev -d -1 ;
+	go run github.com/jackc/tern/v2@latest migrate -m database/migrations --database jolt_dev -d -1 ;
 
 sqlc:
 	go run github.com/sqlc-dev/sqlc/cmd/sqlc@latest generate ;
@@ -11,7 +17,7 @@ templ:
 	go run github.com/a-h/templ/cmd/templ@latest generate -watch -proxy="http://localhost:$(PORT)" -open-browser=false ;
 
 tailwind:
-	npx tailwindcss -i templates/static/input.css -o templates/static/output.css --watch=always
+	npx tailwindcss -i templates/static/input.css -o templates/static/output.css --watch=always --minify
 
 sync_static:
 	go run github.com/air-verse/air@latest \

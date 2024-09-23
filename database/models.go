@@ -15,3 +15,21 @@ type Listing struct {
 	Price       int32       `json:"price"`
 	SellerEmail string      `json:"seller_email"`
 }
+
+type Message struct {
+	ID            string           `json:"id"`
+	NegotiationID string           `json:"negotiation_id"`
+	SenderEmail   string           `json:"sender_email"`
+	SenderName    string           `json:"sender_name"`
+	MessageText   string           `json:"message_text"`
+	TimeSent      pgtype.Timestamp `json:"time_sent"`
+	Status        pgtype.Text      `json:"status"`
+}
+
+type Negotiation struct {
+	ID         string      `json:"id"`
+	ListingID  string      `json:"listing_id"`
+	BuyerEmail string      `json:"buyer_email"`
+	Bid        pgtype.Int4 `json:"bid"`
+	Ask        pgtype.Int4 `json:"ask"`
+}
