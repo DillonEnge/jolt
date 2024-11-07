@@ -3,6 +3,14 @@ SELECT l.*
 FROM listings l
 WHERE l.id = @listing_id::text;
 
+-- name: ListingsByViews :many
+SELECT l.*
+FROM listings l
+JOIN listing_views lv ON lv.listing_id = l.id
+ORDER BY lv.views DESC
+LIMIT $1
+OFFSET $2;
+
 -- name: ListingsByLikeName :many
 SELECT l.*
 FROM listings l

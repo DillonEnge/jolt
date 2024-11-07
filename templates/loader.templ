@@ -1,11 +1,14 @@
 package templates
 
 templ Loader(route string) {
-    <span
-      class="loading loading-dots loading-lg"
-      hx-get={route}
-      hx-trigger="load"
-      hx-swap="outerHTML"
-      >
-    </span>
+    <div id="loader" class="flex flex-col justify-center items-center w-full h-full">
+      <span
+        class="loading loading-dots loading-lg"
+        hx-get={route}
+        hx-trigger="load"
+        hx-target="#loader"
+        hx-swap="outerHTML"
+        >
+      </span>
+    </div>
 }

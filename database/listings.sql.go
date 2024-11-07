@@ -124,6 +124,46 @@ func (q *Queries) ListingsBySellerEmail(ctx context.Context, sellerEmail string)
 	return items, nil
 }
 
+const listingsByViews = `-- name: ListingsByViews :many
+SELECT l.id, l.name, l.description, l.price, l.seller_email
+FROM listings l
+JOIN listing_views lv ON lv.listing_id = l.id
+ORDER BY lv.views DESC
+LIMIT $1
+OFFSET $2
+`
+
+type ListingsByViewsParams struct {
+	Limit  int32 `json:"limit"`
+	Offset int32 `json:"offset"`
+}
+
+func (q *Queries) ListingsByViews(ctx context.Context, arg ListingsByViewsParams) ([]Listing, error) {
+	rows, err := q.db.Query(ctx, listingsByViews, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var items []Listing
+	for rows.Next() {
+		var i Listing
+		if err := rows.Scan(
+			&i.ID,
+			&i.Name,
+			&i.Description,
+			&i.Price,
+			&i.SellerEmail,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const recordListing = `-- name: RecordListing :one
 INSERT INTO listings(id, seller_email, name, description, price) VALUES(
     uuid_generate_v4(),

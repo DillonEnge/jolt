@@ -62,7 +62,7 @@ Jolt requires the following environment variables to be set:
 - `CASDOOR_ORGANIZATION_NAME`: The name of your Casdoor organization.
 - `CASDOOR_REDIRECT_URI`: The redirect URI for Casdoor authentication.
 
-We recommend using `direnv` to manage your environment variables. Follow these steps:
+I recommend using `direnv` to manage your environment variables. Follow these steps:
 
 1. Install `direnv` if you haven't already. (Visit [direnv.net](https://direnv.net) for installation instructions)
 
@@ -107,7 +107,7 @@ Now, whenever you enter the project directory, these environment variables will 
 
 1. Start the PostgreSQL instance using Docker Compose:
    ```
-   docker compose start db -d
+   docker compose up db-dev nats -d
    ```
    This command will start a PostgreSQL container in detached mode.
 

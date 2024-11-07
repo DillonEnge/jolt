@@ -74,6 +74,7 @@ templ drawer(claims *casdoorsdk.Claims, config *api.Config) {
       </ul>
       if claims != nil {
         <a
+          href="/logout"
           class="btn m-4 bg-base-100">
           Log Out
         </a>
@@ -92,10 +93,10 @@ templ drawer(claims *casdoorsdk.Claims, config *api.Config) {
 templ content() {
   <div
     id="inner-content"
-    class="h-dvh flex flex-col items-center justify-evenly overflow-hidden">
+    class="overflow-auto flex-1">
     <span
       class="loading loading-dots loading-lg"
-      hx-get="/popular-listings"
+      hx-get="/listings/popular?page_size=10&page_number=1"
       hx-trigger="load"
       hx-swap="outerHTML"
       ></span>
@@ -110,38 +111,32 @@ templ navbar() {
       <a class="btn btn-ghost text-xl italic">Jolt</a>
     </div>
     <div class="navbar-end">
-      <label class="btn btn-square btn-ghost" for="my-drawer-3" aria-label="open sidebar">
-        <svg
-          xmlns="http://www.w3.org/2000/svg"
-          fill="none"
-          viewBox="0 0 24 24"
-          class="inline-block h-5 w-5 stroke-current">
-          <path
-            stroke-linecap="round"
-            stroke-linejoin="round"
-            stroke-width="2"
-            d="M4 6h16M4 12h16M4 18h16"></path>
-        </svg>
-      </label>
+    <button class="btn">
+      <i data-feather="log-in"/>
+    </button>
     </div>
   </div>
 }
 
 templ Base(claims *casdoorsdk.Claims, config *api.Config) {
   <!doctype html>
-  <html>
+  <html class="overscroll-none">
     <head>
       <meta charset="UTF-8">
-      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0 viewport-fit=cover">
       <link href="./static/output.css" rel="stylesheet">
       <script src="https://unpkg.com/htmx.org@2.0.2"></script>
       <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
       <script src="https://unpkg.com/htmx-ext-ws@2.0.1/ws.js"></script>
+      <script src="https://unpkg.com/feather-icons"></script>
       <style>
       </style>
     </head>
-    <body>
-      @drawer(claims, config)
+    <body class="flex flex-col h-dvh overscroll-none">
+      @navbar()
+      @content()
+      <div hx-get="/navbar?active=trending" hx-swap="outerHTML" hx-trigger="load"/>
+      // @drawer(claims, config)
     </body>
   </html>
 }

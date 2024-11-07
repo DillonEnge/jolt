@@ -16,6 +16,11 @@ type Listing struct {
 	SellerEmail string      `json:"seller_email"`
 }
 
+type ListingView struct {
+	ListingID string `json:"listing_id"`
+	Views     int32  `json:"views"`
+}
+
 type Message struct {
 	ID            string           `json:"id"`
 	NegotiationID string           `json:"negotiation_id"`

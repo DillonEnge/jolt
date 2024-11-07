@@ -15,19 +15,17 @@ import (
 	"github.com/DillonEnge/jolt/internal/api/middleware"
 	v1 "github.com/DillonEnge/jolt/internal/api/v1"
 	"github.com/DillonEnge/jolt/internal/auth"
-	"github.com/DillonEnge/jolt/internal/messagequeue"
 	"github.com/DillonEnge/jolt/internal/sessions"
 	"github.com/DillonEnge/jolt/templates"
 	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nats-io/nats.go"
 )
 
-func Start(address string, dbPool *pgxpool.Pool, config *api.Config) func(context.Context) error {
+func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Config) func(context.Context) error {
 	sm := sessions.NewSessionManager()
 
 	authClient := auth.NewClient(config)
-
-	mq := messagequeue.NewStore()
 
 	db := database.New(dbPool)
 
@@ -38,11 +36,15 @@ func Start(address string, dbPool *pgxpool.Pool, config *api.Config) func(contex
 		w.Write([]byte("OK"))
 	})
 
+	mux.HandleFunc("GET /navbar", makeH(v1.HandleNavbar()))
+
 	mux.Handle("GET /search", templ.Handler(templates.Search()))
 
-	mux.HandleFunc("GET /listings", makeH(v1.HandleListings(db)))
-	mux.HandleFunc("POST /listings", makeH(v1.HandlePostListings(dbPool)))
+	mux.HandleFunc("GET /listings/popular", makeH(v1.HandlePopularListings(db, sm)))
+	mux.HandleFunc("GET /listings", makeH(v1.HandleListings(db, sm)))
+	mux.HandleFunc("POST /listings", makeH(v1.HandlePostListings(db)))
 	mux.HandleFunc("DELETE /listings", makeH(v1.HandleDeleteListings(dbPool)))
+	mux.HandleFunc("PATCH /listings", makeH(v1.HandlePatchListing(db)))
 
 	mux.HandleFunc("GET /create-listing", makeH(v1.HandleCreateListing(sm, authClient)))
 
@@ -51,7 +53,7 @@ func Start(address string, dbPool *pgxpool.Pool, config *api.Config) func(contex
 
 	mux.Handle("GET /chat", makeH(v1.HandleChat(dbPool, sm, authClient, config)))
 
-	mux.Handle("GET /ws/messages", makeH(v1.HandleMessageWS(db, authClient, mq, sm)))
+	mux.Handle("GET /ws/messages", makeH(v1.HandleMessageWS(db, authClient, nc, sm)))
 	mux.Handle("GET /messages", makeH(v1.HandleMessages(dbPool)))
 	mux.Handle("POST /messages", makeH(v1.HandlePostMessage(dbPool, sm, authClient)))
 
@@ -64,13 +66,13 @@ func Start(address string, dbPool *pgxpool.Pool, config *api.Config) func(contex
 		),
 	)
 
-	mux.Handle("GET /popular-listings", templ.Handler(templates.ListingsFiller("Popular Listings", nil)))
-
 	mux.HandleFunc("GET /my-listings", makeH(v1.HandleMyListings(dbPool, authClient, sm)))
 
 	mux.HandleFunc("GET /loader", makeH(v1.HandleLoader()))
 
 	mux.HandleFunc("GET /signin", makeH(v1.HandleSignin(sm, authClient)))
+
+	mux.HandleFunc("GET /logout", makeH(v1.HandleLogout(sm)))
 
 	mux.HandleFunc("GET /", makeH(v1.HandleBase(sm, authClient, config)))
 
@@ -97,8 +99,8 @@ func Start(address string, dbPool *pgxpool.Pool, config *api.Config) func(contex
 	return s.Shutdown
 }
 
-func Service(ctx context.Context, dbPool *pgxpool.Pool, config *api.Config) (func(), error) {
-	shutdown := Start(fmt.Sprintf(":%d", config.Port), dbPool, config)
+func Service(ctx context.Context, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Config) (func(), error) {
+	shutdown := Start(fmt.Sprintf(":%d", config.Port), dbPool, nc, config)
 
 	stopService := func() {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)

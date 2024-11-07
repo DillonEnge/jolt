@@ -1,0 +1,42 @@
+package templates
+
+import "fmt"
+
+type NavbarItemData struct {
+  Route string
+  Name string
+  Icon string
+}
+
+func getRoute(route string) string {
+  return fmt.Sprintf("/loader?route=%s", route)
+}
+
+func getTarget(name string) string {
+  return fmt.Sprintf("/navbar?active=%s", name)
+}
+
+templ Navbar(items []NavbarItemData, active string) {
+  <div id="navbar" class="btm-nav relative">
+    for _, v := range items {
+      @NavbarItem(v, v.Name == active)
+    }
+    <script class="hidden">
+      feather.replace()
+    </script>
+  </div>
+}
+
+templ NavbarItem(item NavbarItemData, active bool) {
+  <button id={fmt.Sprintf("button-%s", item.Name)}
+      class={ templ.KV("active", active) }
+  >
+    <div
+      hx-get={getRoute(item.Route)}
+      hx-target="#inner-content"
+      hx-trigger="click from:closest button"/>
+    <div hx-get={getTarget(item.Name)} hx-target="#navbar" hx-swap="outerHTML"
+      hx-trigger="click from:closest button"/>
+    <i data-feather={item.Icon}></i>
+  </button>
+}

@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 
 	"github.com/DillonEnge/jolt/database"
 	"github.com/DillonEnge/jolt/internal/api"
@@ -20,6 +21,18 @@ type ListingFetcher interface {
 	ListingsByLikeName(ctx context.Context, listingName string) ([]database.Listing, error)
 }
 
+type ListingViewsUpserter interface {
+	UpsertListingViews(ctx context.Context, listingID string) (database.ListingView, error)
+}
+
+type ListingRecorder interface {
+	RecordListing(ctx context.Context, arg database.RecordListingParams) (database.Listing, error)
+}
+
+type ListingsByViewsFetcher interface {
+	ListingsByViews(ctx context.Context, arg database.ListingsByViewsParams) ([]database.Listing, error)
+}
+
 type RecordListingParams struct {
 	SellerEmail string  `json:"seller_email"`
 	ListingName string  `json:"listing_name"`
@@ -27,7 +40,7 @@ type RecordListingParams struct {
 	Price       float32 `json:"price,string"`
 }
 
-func HandleListings(db ListingFetcher) api.HandlerFuncWithError {
+func HandleListings(db ListingFetcher, sm *scs.SessionManager) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		title := r.URL.Query().Get("title")
 
@@ -58,8 +71,61 @@ func HandleListings(db ListingFetcher) api.HandlerFuncWithError {
 			return nil
 		}
 
+		token := sm.GetString(r.Context(), "authToken")
+
 		w.WriteHeader(http.StatusOK)
-		templates.Listings(title, listings).Render(r.Context(), w)
+		templates.Listings(title, listings, token != "").Render(r.Context(), w)
+
+		return nil
+	}
+}
+
+func HandlePopularListings(db ListingsByViewsFetcher, sm *scs.SessionManager) api.HandlerFuncWithError {
+	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
+		pageSizeParam := r.URL.Query().Get("page_size")
+
+		if pageSizeParam == "" {
+			pageSizeParam = "10"
+		}
+
+		pageSize, err := strconv.Atoi(pageSizeParam)
+		if err != nil {
+			return &api.ApiError{
+				Status: http.StatusInternalServerError,
+				Err:    err,
+			}
+		}
+
+		pageNumberParam := r.URL.Query().Get("page_number")
+
+		if pageNumberParam == "" {
+			pageNumberParam = "1"
+		}
+
+		pageNumber, err := strconv.Atoi(pageNumberParam)
+		if err != nil {
+			return &api.ApiError{
+				Status: http.StatusInternalServerError,
+				Err:    err,
+			}
+		}
+
+		rows, err := db.ListingsByViews(r.Context(), database.ListingsByViewsParams{
+			Limit:  int32(pageSize),
+			Offset: int32((pageNumber - 1) * pageSize),
+		})
+
+		if err != nil {
+			return &api.ApiError{
+				Status: http.StatusInternalServerError,
+				Err:    err,
+			}
+		}
+
+		token := sm.GetString(r.Context(), "authToken")
+
+		w.WriteHeader(http.StatusOK)
+		templates.Listings("Popular Listings", rows, token != "").Render(r.Context(), w)
 
 		return nil
 	}
@@ -107,13 +173,13 @@ func HandleMyListings(db *pgxpool.Pool, authClient *auth.Client, sm *scs.Session
 		}
 
 		w.WriteHeader(http.StatusOK)
-		templates.Listings("My Listings", listings).Render(r.Context(), w)
+		templates.Listings("My Listings", listings, true).Render(r.Context(), w)
 
 		return nil
 	}
 }
 
-func HandlePostListings(db *pgxpool.Pool) api.HandlerFuncWithError {
+func HandlePostListings(db ListingRecorder) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		var params RecordListingParams
 		err := json.NewDecoder(r.Body).Decode(&params)
@@ -123,17 +189,7 @@ func HandlePostListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 				Err:    err,
 			}
 		}
-
-		queries, tx, err := database.NewQueries(r.Context(), db)
-		if err != nil {
-			return &api.ApiError{
-				Status: http.StatusInternalServerError,
-				Err:    err,
-			}
-		}
-		defer tx.Rollback(r.Context())
-
-		row, err := queries.RecordListing(r.Context(), database.RecordListingParams{
+		row, err := db.RecordListing(r.Context(), database.RecordListingParams{
 			SellerEmail: params.SellerEmail,
 			ListingName: params.ListingName,
 			Description: params.Description,
@@ -146,10 +202,8 @@ func HandlePostListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 			}
 		}
 
-		tx.Commit(r.Context())
-
 		w.WriteHeader(http.StatusOK)
-		templates.IndividualListing(row).Render(r.Context(), w)
+		templates.IndividualListing(row, false).Render(r.Context(), w)
 
 		return nil
 	}
@@ -187,6 +241,29 @@ func HandleDeleteListings(db *pgxpool.Pool) api.HandlerFuncWithError {
 
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(listing)
+
+		return nil
+	}
+}
+
+func HandlePatchListing(db ListingViewsUpserter) api.HandlerFuncWithError {
+	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
+		id := r.URL.Query().Get("id")
+
+		if _, err := uuid.FromString(id); err != nil {
+			return &api.ApiError{
+				Status: http.StatusInternalServerError,
+				Err:    err,
+			}
+		}
+
+		_, err := db.UpsertListingViews(r.Context(), id)
+		if err != nil {
+			return &api.ApiError{
+				Status: http.StatusInternalServerError,
+				Err:    err,
+			}
+		}
 
 		return nil
 	}

@@ -20,6 +20,12 @@ services:
       - pgdata:/var/lib/postgresql/data
     ports:
       - "5432:5432"
+  nats:
+    image: nats:2.10-alpine3.20
+    ports:
+      - "4222:4222"
+      - "6222:6222" # If using monitoring
+    command: -js
 
 volumes:
   pgdata:

@@ -12,6 +12,7 @@ import (
 	"github.com/DillonEnge/jolt/internal/api"
 	server "github.com/DillonEnge/jolt/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/nats-io/nats.go"
 )
 
 func main() {
@@ -39,8 +40,14 @@ func run(ctx context.Context, _ []string, wait chan os.Signal) error {
 	}
 	defer dbPool.Close()
 
+	nc, err := nats.Connect(nats.DefaultURL)
+	if err != nil {
+		return err
+	}
+	defer nc.Close()
+
 	// Run the service logic and wait for an interrupt.
-	stopService, err := server.Service(ctx, dbPool, config)
+	stopService, err := server.Service(ctx, dbPool, nc, config)
 	defer stopService()
 	if err != nil {
 		return err
