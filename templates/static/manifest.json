@@ -1,0 +1,28 @@
+{
+  "name": "Jolt Marketplace",
+  "short_name": "Jolt",
+  "start_url": "/",
+  "display": "standalone",
+  "icons": [
+    {
+      "src": "./Jolt.png",
+      "sizes": "144x144",
+      "type": "image/png"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./jolt-screenshot-1.png",
+      "sizes": "612x792",
+      "type": "image/png",
+      "label": "Jolt Homepage"
+    },
+    {
+      "src": "./jolt-screenshot-1.png",
+      "sizes": "612x792",
+      "form_factor": "wide",
+      "type": "image/png",
+      "label": "Jolt Homepage"
+    }
+  ]
+}

@@ -125,12 +125,13 @@ templ Base(claims *casdoorsdk.Claims, config *api.Config) {
       <meta charset="UTF-8">
       <meta name="viewport" content="width=device-width, initial-scale=1.0 viewport-fit=cover">
       <link href="./static/output.css" rel="stylesheet">
+      <link rel="manifest" href="./static/manifest.json" />
       <script src="https://unpkg.com/htmx.org@2.0.2"></script>
       <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
       <script src="https://unpkg.com/htmx-ext-ws@2.0.1/ws.js"></script>
       <script src="https://unpkg.com/feather-icons"></script>
-      <style>
-      </style>
+      <script src="./static/mount.js"></script>
+      <style></style>
     </head>
     <body class="flex flex-col h-dvh overscroll-none">
       @navbar()
