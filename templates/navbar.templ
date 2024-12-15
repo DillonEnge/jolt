@@ -29,7 +29,7 @@ templ Navbar(items []NavbarItemData, active string) {
 
 templ NavbarItem(item NavbarItemData, active bool) {
   <button id={fmt.Sprintf("button-%s", item.Name)}
-      class={ templ.KV("active", active) }
+      class={ templ.KV("active", active), templ.KV("pointer-events-none", active) }
   >
     <div
       hx-get={getRoute(item.Route)}

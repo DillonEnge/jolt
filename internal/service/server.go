@@ -19,10 +19,11 @@ import (
 	"github.com/DillonEnge/jolt/templates"
 	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/minio/minio-go/v7"
 	"github.com/nats-io/nats.go"
 )
 
-func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Config) func(context.Context) error {
+func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, minioClient *minio.Client, config *api.Config) func(context.Context) error {
 	sm := sessions.NewSessionManager()
 
 	authClient := auth.NewClient(config)
@@ -36,7 +37,7 @@ func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Conf
 		w.Write([]byte("OK"))
 	})
 
-	mux.HandleFunc("GET /navbar", makeH(v1.HandleNavbar()))
+	mux.HandleFunc("GET /navbar", makeH(v1.HandleNavbar(sm, authClient)))
 
 	mux.Handle("GET /search", templ.Handler(templates.Search()))
 
@@ -72,7 +73,7 @@ func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Conf
 
 	mux.HandleFunc("GET /signin", makeH(v1.HandleSignin(sm, authClient)))
 
-	mux.HandleFunc("GET /logout", makeH(v1.HandleLogout(sm)))
+	mux.HandleFunc("GET /signout", makeH(v1.HandleLogout(sm)))
 
 	mux.HandleFunc("GET /", makeH(v1.HandleBase(sm, authClient, config)))
 
@@ -99,8 +100,8 @@ func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Conf
 	return s.Shutdown
 }
 
-func Service(ctx context.Context, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Config) (func(), error) {
-	shutdown := Start(fmt.Sprintf(":%d", config.Port), dbPool, nc, config)
+func Service(ctx context.Context, dbPool *pgxpool.Pool, nc *nats.Conn, minioClient *minio.Client, config *api.Config) (func(), error) {
+	shutdown := Start(fmt.Sprintf(":%d", config.Port), dbPool, nc, minioClient, config)
 
 	stopService := func() {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)

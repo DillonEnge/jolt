@@ -5,7 +5,6 @@ import (
 
   "github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 	"github.com/DillonEnge/jolt/internal/api"
-
 )
 
 func getSigninURL(config *api.Config) templ.SafeURL {
@@ -19,81 +18,10 @@ func getSigninURL(config *api.Config) templ.SafeURL {
   return templ.SafeURL(urlString)
 }
 
-templ drawer(claims *casdoorsdk.Claims, config *api.Config) {
-  <div class="drawer drawer-end h-dvh">
-    <input id="my-drawer-3" type="checkbox" class="drawer-toggle" />
-    <div class="drawer-content flex flex-col h-dvh overflow-hidden">
-      @navbar()
-      @content()
-    </div>
-    <div class="drawer-side !h-full">
-      <label for="my-drawer-3" aria-label="close sidebar" class="drawer-overlay"></label>
-      <div class="w-60 bg-base-200 min-h-full flex flex-col justify-between py-4">
-      <ul class="menu bg-base-200 min-h-full w-full p-4 flex flex-col space-y-4">
-        <li>
-          <label for="my-drawer-3" hx-get="/loader?route=/popular-listings" hx-target="#inner-content">
-            <a class="text-lg" >
-              Popular Listings
-            </a>
-          </label>
-        </li>
-        <div class="divider"/>
-        <li>
-          <label for="my-drawer-3" hx-get="/loader?route=/search" hx-target="#inner-content">
-            <a class="text-lg">
-              Search Listings
-            </a>
-          </label>
-        </li>
-        if claims != nil {
-        <div class="divider"/>
-        <li>
-          <label for="my-drawer-3" hx-get="/loader?route=/create-listing" hx-target="#inner-content">
-            <a class="text-lg">
-              Create Listing
-            </a>
-          </label>
-        </li>
-        <div class="divider"/>
-        <li>
-          <label for="my-drawer-3" hx-get="/loader?route=/my-listings" hx-target="#inner-content">
-            <a class="text-lg">
-              My Listings
-            </a>
-          </label>
-        </li>
-        <div class="divider"/>
-        <li>
-          <label for="my-drawer-3" hx-get="/loader?route=/negotiations" hx-target="#inner-content">
-            <a class="text-lg">
-              Negotiations
-            </a>
-          </label>
-        </li>
-        }
-      </ul>
-      if claims != nil {
-        <a
-          href="/logout"
-          class="btn m-4 bg-base-100">
-          Log Out
-        </a>
-      } else {
-        <a
-          href={getSigninURL(config)}
-          class="btn m-4 bg-base-100">
-          Log In
-        </a>
-      }
-      </div>
-    </div>
-  </div>
-}
-
 templ content() {
   <div
     id="inner-content"
-    class="overflow-auto flex-1">
+    class="overflow-auto h-dvh flex-1 flex flex-col justify-start w-full items-center p-4">
     <span
       class="loading loading-dots loading-lg"
       hx-get="/listings/popular?page_size=10&page_number=1"
@@ -103,7 +31,7 @@ templ content() {
   </div>
 }
 
-templ navbar() {
+templ navbar(claims *casdoorsdk.Claims, config *api.Config) {
   <div class="navbar bg-base-100">
     <div class="navbar-start">
     </div>
@@ -111,9 +39,20 @@ templ navbar() {
       <a class="btn btn-ghost text-xl italic">Jolt</a>
     </div>
     <div class="navbar-end">
-    <button class="btn">
-      <i data-feather="log-in"/>
-    </button>
+    if claims != nil {
+      <a
+        href="/signout"
+        class="btn m-4 bg-base-100">
+        <i data-feather="log-out"/>
+      </a>
+    }
+    else {
+      <a
+        href={getSigninURL(config)}
+        class="btn m-4 bg-base-100">
+        <i data-feather="log-in"/>
+      </a>
+    }
     </div>
   </div>
 }
@@ -134,10 +73,9 @@ templ Base(claims *casdoorsdk.Claims, config *api.Config) {
       <style></style>
     </head>
     <body class="flex flex-col h-dvh overscroll-none">
-      @navbar()
+      @navbar(claims, config)
       @content()
       <div hx-get="/navbar?active=trending" hx-swap="outerHTML" hx-trigger="load"/>
-      // @drawer(claims, config)
     </body>
   </html>
 }

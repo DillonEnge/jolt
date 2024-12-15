@@ -12,6 +12,8 @@ import (
 	"github.com/DillonEnge/jolt/internal/api"
 	server "github.com/DillonEnge/jolt/internal/service"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/minio/minio-go/v7"
+	"github.com/minio/minio-go/v7/pkg/credentials"
 	"github.com/nats-io/nats.go"
 )
 
@@ -46,8 +48,16 @@ func run(ctx context.Context, _ []string, wait chan os.Signal) error {
 	}
 	defer nc.Close()
 
+	minioClient, err := minio.New(config.Minio.Endpoint, &minio.Options{
+		Creds:  credentials.NewStaticV4(config.Minio.AccessKeyID, config.Minio.SecretAccessKey, ""),
+		Secure: config.Minio.UseSSL,
+	})
+	if err != nil {
+		return err
+	}
+
 	// Run the service logic and wait for an interrupt.
-	stopService, err := server.Service(ctx, dbPool, nc, config)
+	stopService, err := server.Service(ctx, dbPool, nc, minioClient, config)
 	defer stopService()
 	if err != nil {
 		return err
