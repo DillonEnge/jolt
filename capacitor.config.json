@@ -1,0 +1,9 @@
+{
+  "appId": "net.engehost.jolt",
+  "appName": "Jolt",
+  "webDir": "www",
+  "server": {
+    "url": "http://localhost:3000",
+    "cleartext": true
+  }
+}
