@@ -2,7 +2,7 @@
 
 CREATE TABLE negotiations(
     id varchar(255),
-    listing_id varchar(255) NOT NULL REFERENCES listings(id),
+    listing_id varchar(255) NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
     buyer_email varchar(255) NOT NULL,
     bid int,
     ask int,

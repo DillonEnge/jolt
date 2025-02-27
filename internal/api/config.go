@@ -3,11 +3,14 @@ package api
 import (
 	"os"
 	"strconv"
+
+	"github.com/nats-io/nats.go"
 )
 
 type Config struct {
 	DBUrl   string
 	Port    int
+	NatsURL string
 	Casdoor CasdoorConfig
 	Minio   MinioConfig
 }
@@ -34,9 +37,15 @@ func NewConfig() *Config {
 		panic(err)
 	}
 
+	natsURL, ok := os.LookupEnv("NATS_URL")
+	if !ok {
+		natsURL = nats.DefaultURL
+	}
+
 	return &Config{
-		DBUrl: os.Getenv("DATABASE_URL"),
-		Port:  port,
+		DBUrl:   os.Getenv("DATABASE_URL"),
+		Port:    port,
+		NatsURL: natsURL,
 		Casdoor: CasdoorConfig{
 			Endpoint:         os.Getenv("CASDOOR_ENDPOINT"),
 			ClientID:         os.Getenv("CASDOOR_CLIENT_ID"),

@@ -42,7 +42,7 @@ func run(ctx context.Context, _ []string, wait chan os.Signal) error {
 	}
 	defer dbPool.Close()
 
-	nc, err := nats.Connect(nats.DefaultURL)
+	nc, err := nats.Connect(config.NatsURL)
 	if err != nil {
 		return err
 	}

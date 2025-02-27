@@ -1,7 +1,7 @@
 -- Write your migrate up statements here
 
 CREATE TABLE listing_views(
-    listing_id varchar(255) NOT NULL REFERENCES listings(id),
+    listing_id varchar(255) NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
     views int NOT NULL DEFAULT 0,
     PRIMARY KEY(listing_id)
 );

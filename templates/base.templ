@@ -32,7 +32,7 @@ templ content() {
 }
 
 templ navbar(claims *casdoorsdk.Claims, config *api.Config) {
-  <div class="navbar bg-base-100">
+  <div class="navbar bg-base-100 shadow-sm h-6">
     <div class="navbar-start">
     </div>
     <div class="navbar-center">
@@ -67,10 +67,17 @@ templ Base(claims *casdoorsdk.Claims, config *api.Config) {
       <link rel="manifest" href="./static/manifest.json" />
       <script src="https://unpkg.com/htmx.org@2.0.2"></script>
       <script src="https://unpkg.com/htmx.org/dist/ext/json-enc.js"></script>
-      <script src="https://unpkg.com/htmx-ext-ws@2.0.1/ws.js"></script>
+      <script src="https://unpkg.com/htmx-ext-ws@2.0.2/ws.js"></script>
       <script src="https://unpkg.com/feather-icons"></script>
       <script src="./static/mount.js"></script>
-      <style></style>
+      <style>
+        body {
+          padding-top: env(safe-area-inset-top);
+          padding-bottom: env(safe-area-inset-bottom);
+          padding-left: env(safe-area-inset-left);
+          padding-right: env(safe-area-inset-right);
+        }
+      </style>
     </head>
     <body class="flex flex-col h-dvh overscroll-none">
       @navbar(claims, config)

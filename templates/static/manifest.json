@@ -3,6 +3,8 @@
   "short_name": "Jolt",
   "start_url": "/",
   "display": "standalone",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
   "icons": [
     {
       "src": "./Jolt.png",

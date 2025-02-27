@@ -5,6 +5,10 @@ services:
     env_file: .env
     ports:
       - "8124:8124"
+    environment:
+      NATS_URL: "nats"
+    links:
+      - nats
   db-dev:
     image: postgres
     restart: always

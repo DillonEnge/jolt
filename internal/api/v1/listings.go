@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"strconv"
 
@@ -40,7 +41,7 @@ type RecordListingParams struct {
 	Price       float32 `json:"price,string"`
 }
 
-func HandleListings(db ListingFetcher, sm *scs.SessionManager) api.HandlerFuncWithError {
+func HandleListings(db ListingFetcher, authClient *auth.Client, sm *scs.SessionManager) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		title := r.URL.Query().Get("title")
 
@@ -72,15 +73,20 @@ func HandleListings(db ListingFetcher, sm *scs.SessionManager) api.HandlerFuncWi
 		}
 
 		token := sm.GetString(r.Context(), "authToken")
+		claims, err := authClient.ParseJwtToken(token)
+		if err != nil {
+			slog.Error("failed to decode token", "err", err)
+			claims = nil
+		}
 
 		w.WriteHeader(http.StatusOK)
-		templates.Listings(title, listings, token != "").Render(r.Context(), w)
+		templates.Listings(title, listings, claims, token != "").Render(r.Context(), w)
 
 		return nil
 	}
 }
 
-func HandlePopularListings(db ListingsByViewsFetcher, sm *scs.SessionManager) api.HandlerFuncWithError {
+func HandlePopularListings(db ListingsByViewsFetcher, authClient *auth.Client, sm *scs.SessionManager) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
 		pageSizeParam := r.URL.Query().Get("page_size")
 
@@ -123,9 +129,14 @@ func HandlePopularListings(db ListingsByViewsFetcher, sm *scs.SessionManager) ap
 		}
 
 		token := sm.GetString(r.Context(), "authToken")
+		claims, err := authClient.ParseJwtToken(token)
+		if err != nil {
+			slog.Error("failed to decode token", "err", err)
+			claims = nil
+		}
 
 		w.WriteHeader(http.StatusOK)
-		templates.Listings("Popular Listings", rows, token != "").Render(r.Context(), w)
+		templates.Listings("Popular Listings", rows, claims, token != "").Render(r.Context(), w)
 
 		return nil
 	}
@@ -173,7 +184,7 @@ func HandleMyListings(db *pgxpool.Pool, authClient *auth.Client, sm *scs.Session
 		}
 
 		w.WriteHeader(http.StatusOK)
-		templates.Listings("My Listings", listings, true).Render(r.Context(), w)
+		templates.Listings("My Listings", listings, nil, false).Render(r.Context(), w)
 
 		return nil
 	}
@@ -203,7 +214,7 @@ func HandlePostListings(db ListingRecorder) api.HandlerFuncWithError {
 		}
 
 		w.WriteHeader(http.StatusOK)
-		templates.IndividualListing(row, false).Render(r.Context(), w)
+		templates.IndividualListing(row, nil, false).Render(r.Context(), w)
 
 		return nil
 	}

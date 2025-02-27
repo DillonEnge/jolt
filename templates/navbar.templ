@@ -17,7 +17,7 @@ func getTarget(name string) string {
 }
 
 templ Navbar(items []NavbarItemData, active string) {
-  <div id="navbar" class="btm-nav relative">
+  <div id="navbar" class="btm-nav relative h-20">
     for _, v := range items {
       @NavbarItem(v, v.Name == active)
     }

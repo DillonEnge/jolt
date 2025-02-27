@@ -29,7 +29,7 @@ templ ListingsFiller(title string, listings []string) {
   </div>
 }
 
-templ Listings(title string, m []database.Listing, authed bool) {
+templ Listings(title string, m []database.Listing, c *casdoorsdk.Claims, authed bool) {
   <div id="listings" class="flex flex-col justify-start w-full items-center p-4">
     <article class="prose">
       <h1 class="py-6">{ title }</h1>
@@ -38,13 +38,13 @@ templ Listings(title string, m []database.Listing, authed bool) {
       id="listings-inner"
       class="py-8 w-full flex flex-col items-center justify-start space-y-8">
       for _, v := range m {
-        @IndividualListing(v, authed)
+        @IndividualListing(v, c, authed)
       }
     </div>
   </div>
 }
 
-templ IndividualListing(l database.Listing, authed bool) {
+templ IndividualListing(l database.Listing, c *casdoorsdk.Claims, authed bool) {
   <div
     class="card bg-base-100 w-full shadow-xl"
     hx-patch={fmtListingRoute(l.ID)}
@@ -55,7 +55,7 @@ templ IndividualListing(l database.Listing, authed bool) {
       <h3>Seller: { l.SellerEmail }</h3>
       <p>{ l.Description.String }</p>
       <p>{ fmt.Sprintf("$%.2f", float32(l.Price)/100) }</p>
-      if authed {
+      if authed && c.Email != l.SellerEmail {
         <div class="card-actions justify-end">
           <button class="btn btn-primary" hx-post={fmt.Sprintf("/negotiations?listing_id=%s", l.ID)} hx-target="#inner-content">Bid</button>
         </div>

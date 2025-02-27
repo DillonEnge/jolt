@@ -41,8 +41,8 @@ func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, minioClient *min
 
 	mux.Handle("GET /search", templ.Handler(templates.Search()))
 
-	mux.HandleFunc("GET /listings/popular", makeH(v1.HandlePopularListings(db, sm)))
-	mux.HandleFunc("GET /listings", makeH(v1.HandleListings(db, sm)))
+	mux.HandleFunc("GET /listings/popular", makeH(v1.HandlePopularListings(db, authClient, sm)))
+	mux.HandleFunc("GET /listings", makeH(v1.HandleListings(db, authClient, sm)))
 	mux.HandleFunc("POST /listings", makeH(v1.HandlePostListings(db)))
 	mux.HandleFunc("DELETE /listings", makeH(v1.HandleDeleteListings(dbPool)))
 	mux.HandleFunc("PATCH /listings", makeH(v1.HandlePatchListing(db)))

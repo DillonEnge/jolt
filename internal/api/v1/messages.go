@@ -125,8 +125,6 @@ func HandleMessageWS(db MessageRecorder, authClient *auth.Client, nc *nats.Conn,
 			nc.Publish(negotiationID, payload)
 		}
 
-		c.Close(websocket.StatusNormalClosure, "")
-
 		slog.Error("encountered err", "error", err)
 
 		return nil
