@@ -8,11 +8,11 @@ import (
 )
 
 type Config struct {
-	DBUrl   string
-	Port    int
-	NatsURL string
-	Casdoor CasdoorConfig
-	Minio   MinioConfig
+	DBUrl     string
+	Port      int
+	NatsURL   string
+	Casdoor   CasdoorConfig
+	SeaweedFS SeaweedFSConfig
 }
 
 type CasdoorConfig struct {
@@ -24,11 +24,9 @@ type CasdoorConfig struct {
 	ApplicationName  string
 }
 
-type MinioConfig struct {
-	Endpoint        string
-	AccessKeyID     string
-	SecretAccessKey string
-	UseSSL          bool
+type SeaweedFSConfig struct {
+	MasterURL  string
+	VolumesURL string
 }
 
 func NewConfig() *Config {
@@ -54,11 +52,9 @@ func NewConfig() *Config {
 			OrganizationName: os.Getenv("CASDOOR_ORGANIZATION_NAME"),
 			ApplicationName:  os.Getenv("CASDOOR_APPLICATION_NAME"),
 		},
-		Minio: MinioConfig{
-			Endpoint:        os.Getenv("MINIO_ENDPOINT"),
-			AccessKeyID:     os.Getenv("MINIO_ACCESS_KEY_ID"),
-			SecretAccessKey: os.Getenv("MINIO_SECRET_ACCESS_KEY"),
-			UseSSL:          false,
+		SeaweedFS: SeaweedFSConfig{
+			MasterURL:  os.Getenv("SEAWEEDFS_MASTER_URL"),
+			VolumesURL: os.Getenv("SEAWEEDFS_VOLUMES_URL"),
 		},
 	}
 }

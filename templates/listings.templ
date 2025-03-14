@@ -3,6 +3,7 @@ package templates
 import "fmt"
 import "github.com/casdoor/casdoor-go-sdk/casdoorsdk"
 import "github.com/DillonEnge/jolt/database"
+import "strconv"
 
 func fmtListingRoute(id string) string {
   return fmt.Sprintf("/listings?id=%s", id)
@@ -29,7 +30,7 @@ templ ListingsFiller(title string, listings []string) {
   </div>
 }
 
-templ Listings(title string, m []database.Listing, c *casdoorsdk.Claims, authed bool) {
+templ Listings(title string, m []database.ListingWithImageUrl, c *casdoorsdk.Claims, authed bool) {
   <div id="listings" class="flex flex-col justify-start w-full items-center p-4">
     <article class="prose">
       <h1 class="py-6">{ title }</h1>
@@ -44,12 +45,31 @@ templ Listings(title string, m []database.Listing, c *casdoorsdk.Claims, authed 
   </div>
 }
 
-templ IndividualListing(l database.Listing, c *casdoorsdk.Claims, authed bool) {
+templ IndividualListing(l database.ListingWithImageUrl, c *casdoorsdk.Claims, authed bool) {
   <div
     class="card bg-base-100 w-full shadow-xl"
     hx-patch={fmtListingRoute(l.ID)}
     hx-trigger="intersect once"
     hx-swap="none">
+    if len(l.ImageUrls) > 0 {
+    <div class="carousel w-full">
+    for i, imageURL := range l.ImageUrls {
+      <div id={fmt.Sprintf("%s_image_%d", l.ID, i+1)} class="carousel-item w-full">
+        <img
+          src={imageURL}
+          class="w-full" />
+      </div>
+    }
+    </div>
+
+    if len(l.ImageUrls) > 1 {
+    <div class="flex w-full justify-center gap-2 py-2">
+      for i := range l.ImageUrls {
+      <a href={templ.SafeURL(fmt.Sprintf("#%s_image_%d", l.ID, i+1))} class="btn btn-xs">{strconv.Itoa(i+1)}</a>
+      }
+    </div>
+    }
+    }
     <div class="card-body">
       <h2 class="card-title">{ l.Name }</h2>
       <h3>Seller: { l.SellerEmail }</h3>
@@ -75,7 +95,7 @@ templ CreateListing(claims *casdoorsdk.Claims) {
         </article>
         <form
           hx-post="/listings"
-          hx-ext="json-enc"
+          hx-encoding='multipart/form-data'
           hx-target="#create-listing"
           hx-swap="beforeend"
           class="flex flex-col space-y-4">
@@ -95,8 +115,51 @@ templ CreateListing(claims *casdoorsdk.Claims) {
               <input type="number" name="price" class="grow" placeholder="0.00" step="0.01" />
             </label>
           </div>
+          <div>
+            <label>Images</label>
+            <div class="flex flex-col items-center justify-center w-full">
+              <label for="image-upload" class="flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-base-200 hover:bg-base-300">
+                <div class="flex flex-col items-center justify-center pt-5 pb-6">
+                  <svg class="w-8 h-8 mb-2 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 20 16">
+                    <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 13h3a3 3 0 0 0 0-6h-.025A5.56 5.56 0 0 0 16 6.5 5.5 5.5 0 0 0 5.207 5.021C5.137 5.017 5.071 5 5 5a4 4 0 0 0 0 8h2.167M10 15V6m0 0L8 8m2-2 2 2"/>
+                  </svg>
+                  <p class="text-sm text-gray-500">Tap to upload images</p>
+                  <p class="text-xs text-gray-500 mt-1">(Select multiple if needed)</p>
+                </div>
+                <input id="image-upload" type="file" name="images" multiple class="hidden" accept="image/*" />
+              </label>
+            </div>
+            <div id="image-preview" class="flex flex-wrap gap-2 mt-2"></div>
+          </div>
           <button type="submit" class="btn">Create Listing</button>
         </form>
+        <script>
+          document.getElementById('image-upload').addEventListener('change', function(event) {
+            const preview = document.getElementById('image-preview');
+            preview.innerHTML = '';
+            
+            if (this.files) {
+              Array.from(this.files).forEach(file => {
+                if (!file.type.match('image.*')) return;
+                
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                  const div = document.createElement('div');
+                  div.className = 'relative w-16 h-16';
+                  
+                  const img = document.createElement('img');
+                  img.src = e.target.result;
+                  img.className = 'w-full h-full object-cover rounded-md';
+                  div.appendChild(img);
+                  
+                  preview.appendChild(div);
+                };
+                
+                reader.readAsDataURL(file);
+              });
+            }
+          });
+        </script>
         <div class="card-actions justify-end">
         </div>
       </div>

@@ -2,7 +2,7 @@
 
 CREATE TABLE messages(
     id varchar(255),
-    negotiation_id varchar(255) NOT NULL REFERENCES negotiations(id),
+    negotiation_id varchar(255) NOT NULL REFERENCES negotiations(id) ON DELETE CASCADE,
     sender_email varchar(255) NOT NULL,
     sender_name varchar(255) NOT NULL,
     message_text varchar(255) NOT NULL,

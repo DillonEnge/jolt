@@ -17,16 +17,21 @@ import (
 	"github.com/DillonEnge/jolt/internal/auth"
 	"github.com/DillonEnge/jolt/internal/sessions"
 	"github.com/DillonEnge/jolt/templates"
+	"github.com/DillonEnge/seaweedfs-go-client"
 	"github.com/a-h/templ"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/minio/minio-go/v7"
 	"github.com/nats-io/nats.go"
 )
 
-func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, minioClient *minio.Client, config *api.Config) func(context.Context) error {
+func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Config) func(context.Context) error {
 	sm := sessions.NewSessionManager()
 
 	authClient := auth.NewClient(config)
+
+	fsClient := seaweedfs.NewClient(seaweedfs.Config{
+		MasterURL:  config.SeaweedFS.MasterURL,
+		VolumesURL: config.SeaweedFS.VolumesURL,
+	})
 
 	db := database.New(dbPool)
 
@@ -43,7 +48,7 @@ func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, minioClient *min
 
 	mux.HandleFunc("GET /listings/popular", makeH(v1.HandlePopularListings(db, authClient, sm)))
 	mux.HandleFunc("GET /listings", makeH(v1.HandleListings(db, authClient, sm)))
-	mux.HandleFunc("POST /listings", makeH(v1.HandlePostListings(db)))
+	mux.HandleFunc("POST /listings", makeH(v1.HandlePostListings(db, fsClient, config)))
 	mux.HandleFunc("DELETE /listings", makeH(v1.HandleDeleteListings(dbPool)))
 	mux.HandleFunc("PATCH /listings", makeH(v1.HandlePatchListing(db)))
 
@@ -100,8 +105,8 @@ func Start(address string, dbPool *pgxpool.Pool, nc *nats.Conn, minioClient *min
 	return s.Shutdown
 }
 
-func Service(ctx context.Context, dbPool *pgxpool.Pool, nc *nats.Conn, minioClient *minio.Client, config *api.Config) (func(), error) {
-	shutdown := Start(fmt.Sprintf(":%d", config.Port), dbPool, nc, minioClient, config)
+func Service(ctx context.Context, dbPool *pgxpool.Pool, nc *nats.Conn, config *api.Config) (func(), error) {
+	shutdown := Start(fmt.Sprintf(":%d", config.Port), dbPool, nc, config)
 
 	stopService := func() {
 		ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
@@ -118,6 +123,7 @@ func Service(ctx context.Context, dbPool *pgxpool.Pool, nc *nats.Conn, minioClie
 func makeH(h api.HandlerFuncWithError) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if err := h(w, r); err != nil {
+			slog.Error("encountered error while serving request", "err", err)
 			w.WriteHeader(err.Status)
 			errJSON := fmt.Sprintf(
 				`{"error": "%s"}`,

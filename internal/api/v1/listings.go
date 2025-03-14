@@ -12,26 +12,29 @@ import (
 	"github.com/DillonEnge/jolt/internal/api"
 	"github.com/DillonEnge/jolt/internal/auth"
 	"github.com/DillonEnge/jolt/templates"
+	"github.com/DillonEnge/seaweedfs-go-client"
 	"github.com/alexedwards/scs/v2"
 	"github.com/gofrs/uuid/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type ListingFetcher interface {
-	ListingByID(ctx context.Context, listingID string) ([]database.Listing, error)
-	ListingsByLikeName(ctx context.Context, listingName string) ([]database.Listing, error)
+	ListingByID(ctx context.Context, listingID string) (database.ListingWithImageUrl, error)
+	ListingsByLikeName(ctx context.Context, listingName string) ([]database.ListingWithImageUrl, error)
 }
 
 type ListingViewsUpserter interface {
 	UpsertListingViews(ctx context.Context, listingID string) (database.ListingView, error)
 }
 
-type ListingRecorder interface {
+type ListingRecorderFetcher interface {
 	RecordListing(ctx context.Context, arg database.RecordListingParams) (database.Listing, error)
+	RecordListingImages(ctx context.Context, arg database.RecordListingImagesParams) ([]database.ListingImage, error)
+	ListingByID(ctx context.Context, listingID string) (database.ListingWithImageUrl, error)
 }
 
 type ListingsByViewsFetcher interface {
-	ListingsByViews(ctx context.Context, arg database.ListingsByViewsParams) ([]database.Listing, error)
+	ListingsByViews(ctx context.Context, arg database.ListingsByViewsParams) ([]database.ListingWithImageUrl, error)
 }
 
 type RecordListingParams struct {
@@ -190,21 +193,88 @@ func HandleMyListings(db *pgxpool.Pool, authClient *auth.Client, sm *scs.Session
 	}
 }
 
-func HandlePostListings(db ListingRecorder) api.HandlerFuncWithError {
+func HandlePostListings(db ListingRecorderFetcher, fsClient *seaweedfs.Client, config *api.Config) api.HandlerFuncWithError {
 	return func(w http.ResponseWriter, r *http.Request) *api.ApiError {
-		var params RecordListingParams
-		err := json.NewDecoder(r.Body).Decode(&params)
-		if err != nil {
+		// Parse multipart form with 10MB max memory
+		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			return &api.ApiError{
-				Status: http.StatusInternalServerError,
+				Status: http.StatusBadRequest,
 				Err:    err,
 			}
 		}
-		row, err := db.RecordListing(r.Context(), database.RecordListingParams{
-			SellerEmail: params.SellerEmail,
-			ListingName: params.ListingName,
-			Description: params.Description,
-			Price:       int32(params.Price * 100),
+
+		// Get form values
+		sellerEmail := r.FormValue("seller_email")
+		listingName := r.FormValue("listing_name")
+		description := r.FormValue("description")
+		priceStr := r.FormValue("price")
+
+		// Convert price to float
+		price, err := strconv.ParseFloat(priceStr, 32)
+		if err != nil {
+			return &api.ApiError{
+				Status: http.StatusBadRequest,
+				Err:    fmt.Errorf("invalid price format: %v", err),
+			}
+		}
+
+		listingID, err := uuid.NewV4()
+		if err != nil {
+			return &api.ApiError{
+				Status: http.StatusInternalServerError,
+				Err:    fmt.Errorf("unable to create listing id: %v", err),
+			}
+		}
+		imageURLs := []string{}
+		// Get image files
+		files := r.MultipartForm.File["images"]
+		if len(files) > 0 {
+			slog.Info("Processing images", "count", len(files))
+			// TODO: Save images to storage service, attach to listing
+			for i, fileHeader := range files {
+				slog.Info("Image file", "index", i, "filename", fileHeader.Filename, "size", fileHeader.Size)
+				f, err := fileHeader.Open()
+				if err != nil {
+					return &api.ApiError{
+						Status: http.StatusInternalServerError,
+						Err:    fmt.Errorf("unable to open image fileHeader: %v", err),
+					}
+				}
+				defer f.Close()
+
+				daResp, err := fsClient.DirAssign()
+				if err != nil {
+					return &api.ApiError{
+						Status: http.StatusInternalServerError,
+						Err:    fmt.Errorf("failed to assign a dir via fsClient: %v", err),
+					}
+				}
+
+				ufResp, err := fsClient.UploadFile(f, fileHeader.Filename, daResp.FID)
+				if err != nil {
+					return &api.ApiError{
+						Status: http.StatusInternalServerError,
+						Err:    fmt.Errorf("failed to upload file via fsClient: %v", err),
+					}
+				}
+				if ufResp.Size == 0 {
+					return &api.ApiError{
+						Status: http.StatusInternalServerError,
+						Err:    fmt.Errorf("failed to upload file via fsClient: %s", "image size is 0"),
+					}
+				}
+
+				imageURLs = append(imageURLs, fmt.Sprintf("%s/%s", config.SeaweedFS.VolumesURL, daResp.FID))
+			}
+		}
+
+		// Record the listing in the database
+		_, err = db.RecordListing(r.Context(), database.RecordListingParams{
+			ID:          listingID.String(),
+			SellerEmail: sellerEmail,
+			ListingName: listingName,
+			Description: description,
+			Price:       int32(float32(price) * 100),
 		})
 		if err != nil {
 			return &api.ApiError{
@@ -213,8 +283,21 @@ func HandlePostListings(db ListingRecorder) api.HandlerFuncWithError {
 			}
 		}
 
+		_, err = db.RecordListingImages(r.Context(), database.RecordListingImagesParams{
+			ListingID:     listingID.String(),
+			ImageUrlArray: imageURLs,
+		})
+		if err != nil {
+			return &api.ApiError{
+				Status: http.StatusInternalServerError,
+				Err:    err,
+			}
+		}
+
+		listing, err := db.ListingByID(r.Context(), listingID.String())
+
 		w.WriteHeader(http.StatusOK)
-		templates.IndividualListing(row, nil, false).Render(r.Context(), w)
+		templates.IndividualListing(listing, nil, false).Render(r.Context(), w)
 
 		return nil
 	}
